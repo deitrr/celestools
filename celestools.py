@@ -415,7 +415,7 @@ def f2eanom(f, e):
     eanom[f>np.pi] = 2*np.pi - np.arccos(cosE[f>np.pi])
     return eanom
 
-def osc2x(ms, m, a, e, inc, apc, lasn, manom):
+def osc2x(ms, m, a, e, inc, apc, lasn, manom, inUnits = 'iau', outUnits = 'iau', angUnits = 'deg'):
     #masses in solar units, a in AU, angles in degrees
     if not isinstance(m, np.ndarray):
       m = np.array([m])
@@ -442,6 +442,27 @@ def osc2x(ms, m, a, e, inc, apc, lasn, manom):
       print ('not all elements have the same length!')
       return None
       
+    if inUnits == 'iau':
+      pass
+    elif inUnits == 'mks':
+      m /= MSUNkg
+      a /= AUm
+    elif inUnits == 'cgs':
+      m /= MSUNg
+      a /= AUc
+    else:
+      raise ValueError('Invalid units for "inUnits". Valid options are "iau", "mks", or "cgs"')
+
+    if angUnits == 'deg':
+      inc *= DEG
+      apc *= DEG
+      lasn *= DEG
+      manom *= DEG
+    elif angUnits == 'rad':
+      pass
+    else:
+      raise ValueError('Invalid units for "angUnits". Valid options are "rad" or "deg"')
+
     nplanets = len(m)
     xi = np.zeros((2, nplanets))
     vi = np.zeros((2, nplanets))
@@ -452,7 +473,7 @@ def osc2x(ms, m, a, e, inc, apc, lasn, manom):
     #----Calc eccentric anomaly and astrocentric x,y,z coords------------
     for j in range(nplanets):
         
-        eanom[j] = eccanom_n(manom[j]*DEG, e[j])
+        eanom[j] = eccanom_n(manom[j], e[j])
                 
         xi[0, j] = xinit(a[j], e[j], eanom[j])
         xi[1, j] = yinit(a[j], e[j], eanom[j])
@@ -460,13 +481,25 @@ def osc2x(ms, m, a, e, inc, apc, lasn, manom):
         vi[0, j] = vxi(m[j], ms, a[j], xi[0,j], xi[1,j], eanom[j])
         vi[1, j] = vyi(m[j], ms, a[j], xi[0,j], xi[1,j], eanom[j], e[j])
         ang = np.zeros((3,2))
-        ang[0] = [xangle1(lasn[j]*DEG,apc[j]*DEG,inc[j]*DEG), xangle2(lasn[j]*DEG,apc[j]*DEG,inc[j]*DEG)]
-        ang[1] = [yangle1(lasn[j]*DEG,apc[j]*DEG,inc[j]*DEG), yangle2(lasn[j]*DEG,apc[j]*DEG,inc[j]*DEG)]
-        ang[2] = [zangle1(apc[j]*DEG, inc[j]*DEG), zangle2(apc[j]*DEG, inc[j]*DEG)]
+        ang[0] = [xangle1(lasn[j],apc[j],inc[j]), xangle2(lasn[j],apc[j],inc[j])]
+        ang[1] = [yangle1(lasn[j],apc[j],inc[j]), yangle2(lasn[j],apc[j],inc[j])]
+        ang[2] = [zangle1(apc[j], inc[j]), zangle2(apc[j], inc[j])]
 
         for kk in range(3):
             xastro[kk, j] = sum(ang[kk, :] * xi[:, j])
             vastro[kk, j] = sum(ang[kk, :] * vi[:, j])
+            
+    if outUnits == 'iau':
+      pass
+    elif outUnits == 'mks':
+      xastro *= AUm
+      vastro *= AUm/s2d
+    elif outUnits == 'cgs':
+      xastro *= AUc
+      vastro *= AUc/s2d
+    else:
+      raise ValueError('Invalid units for "outUnits". Valid options are "iau", "mks", or "cgs"')
+
     return (xastro, vastro) #return x in AU and v in AU/day
 
 
