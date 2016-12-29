@@ -1,6 +1,7 @@
 # -*- coding: iso-8859-1 -*-
 import numpy as np
 import mechanics as mech
+from copy import deepcopy
 
 k = 0.01720209895
 DEG = np.pi/180.0
@@ -8,6 +9,7 @@ G = 6.67428e-11
 AU = 1.49598e11
 pc = 3.08568025e18
 MSUN = 1.988416e30
+MEARTH = 5.972186e24
 s2d = 86400.0
 
 def MutualInc(i1, i2, la1, la2, angUnits = 'deg'):
@@ -100,7 +102,7 @@ def RV_SemiAmp(m1, m2, a, e, inc, inUnits = 'iau', outUnits = 'mks', angUnits = 
   else:
     raise ValueError('Invalid units for "angUnits". Valid options are "rad" or "deg"')
 
-  RV = (np.sqrt(Gmks/(1-e**2))*m2*MSUNkg*np.sin(inc)*(a*AUm*(m1+m2)*MSUNkg)**(-0.5))
+  RV = (np.sqrt(G/(1-e**2))*m2*MSUN*np.sin(inc)*(a*AU*(m1+m2)*MSUN)**(-0.5))
   if outUnits == 'mks':
     return RV
   elif outUnits == 'cgs':
@@ -213,25 +215,39 @@ def True2EccAnom(f, e):
 def Osc2X(ms, m, a, e, inc, apc, lasn, manom, inUnits = 'iau', outUnits = 'iau', angUnits = 'deg'):
     #masses in solar units, a in AU, angles in degrees
     if not isinstance(m, np.ndarray):
-      m = np.array([m])
+      m0 = np.array([m])
+    else:
+      m0 = deepcopy(m)
 
     if not isinstance(a, np.ndarray):
-      a = np.array([a])
+      a0 = np.array([a])
+    else:
+      a0 = deepcopy(a)
       
     if not isinstance(e, np.ndarray):
-      e = np.array([e])
+      e0 = np.array([e])
+    else:
+      e0 = deepcopy(e)
 
     if not isinstance(inc, np.ndarray):
-      inc = np.array([inc])
+      inc0 = np.array([inc])
+    else:
+      inc0 = deepcopy(inc)
 
     if not isinstance(apc, np.ndarray):
-      apc = np.array([apc])
+      apc0 = np.array([apc])
+    else:
+      apc0 = deepcopy(apc)
 
     if not isinstance(lasn, np.ndarray):
-      lasn = np.array([lasn])
-
+      lasn0 = np.array([lasn])
+    else:
+      lasn0 = deepcopy(lasn)
+  
     if not isinstance(manom, np.ndarray):
-      manom = np.array([manom])
+      manom0 = np.array([manom])
+    else:
+      manom0 = deepcopy(manom)
       
     if len(m) != len(a) or len(m) != len(e) or len(m) != len(inc) or len(m) != len(apc) or len(m) != len(lasn) or len(m) != len(manom):
       print ('not all elements have the same length!')
@@ -240,25 +256,25 @@ def Osc2X(ms, m, a, e, inc, apc, lasn, manom, inUnits = 'iau', outUnits = 'iau',
     if inUnits == 'iau':
       pass
     elif inUnits == 'mks':
-      m /= MSUNkg
-      a /= AUm
+      m0 /= MSUNkg
+      a0 /= AUm
     elif inUnits == 'cgs':
-      m /= MSUNg
-      a /= AUc
+      m0 /= MSUNg
+      a0 /= AUc
     else:
       raise ValueError('Invalid units for "inUnits". Valid options are "iau", "mks", or "cgs"')
 
     if angUnits == 'deg':
-      inc *= DEG
-      apc *= DEG
-      lasn *= DEG
-      manom *= DEG
+      inc0 *= DEG
+      apc0 *= DEG
+      lasn0 *= DEG
+      manom0 *= DEG
     elif angUnits == 'rad':
       pass
     else:
       raise ValueError('Invalid units for "angUnits". Valid options are "rad" or "deg"')
 
-    nplanets = len(m)
+    nplanets = len(m0)
     xi = np.zeros((2, nplanets))
     vi = np.zeros((2, nplanets))
     eanom = np.zeros(nplanets)
@@ -268,17 +284,17 @@ def Osc2X(ms, m, a, e, inc, apc, lasn, manom, inUnits = 'iau', outUnits = 'iau',
     #----Calc eccentric anomaly and astrocentric x,y,z coords------------
     for j in range(nplanets):
         
-        eanom[j] = mech.solve_kepler(manom[j], e[j])
+        eanom[j] = mech.solve_kepler(manom0[j], e0[j])
                 
-        xi[0, j] = mech.xinit(a[j], e[j], eanom[j])
-        xi[1, j] = mech.yinit(a[j], e[j], eanom[j])
+        xi[0, j] = mech.xinit(a0[j], e0[j], eanom[j])
+        xi[1, j] = mech.yinit(a0[j], e0[j], eanom[j])
         
-        vi[0, j] = mech.vxi(m[j], ms, a[j], xi[0,j], xi[1,j], eanom[j])
-        vi[1, j] = mech.vyi(m[j], ms, a[j], xi[0,j], xi[1,j], eanom[j], e[j])
+        vi[0, j] = mech.vxi(m0[j], ms, a0[j], xi[0,j], xi[1,j], eanom[j])
+        vi[1, j] = mech.vyi(m0[j], ms, a0[j], xi[0,j], xi[1,j], eanom[j], e0[j])
         ang = np.zeros((3,2))
-        ang[0] = [mech.xangle1(lasn[j],apc[j],inc[j]), mech.xangle2(lasn[j],apc[j],inc[j])]
-        ang[1] = [mech.yangle1(lasn[j],apc[j],inc[j]), mech.yangle2(lasn[j],apc[j],inc[j])]
-        ang[2] = [mech.zangle1(apc[j], inc[j]), mech.zangle2(apc[j], inc[j])]
+        ang[0] = [mech.xangle1(lasn0[j],apc0[j],inc0[j]), mech.xangle2(lasn0[j],apc0[j],inc0[j])]
+        ang[1] = [mech.yangle1(lasn0[j],apc0[j],inc0[j]), mech.yangle2(lasn0[j],apc0[j],inc0[j])]
+        ang[2] = [mech.zangle1(apc0[j], inc0[j]), mech.zangle2(apc0[j], inc0[j])]
 
         for kk in range(3):
             xastro[kk, j] = sum(ang[kk, :] * xi[:, j])
@@ -345,7 +361,6 @@ def X2Osc(ms, m, x, v, set_argp = False, argp=np.array([]), set_longa = False, l
         cosf = (a[i] * (1.0 - e[i]*e[i]) / r - 1.0) / e[i]
         #print sinf, cosf
         
-        
         sinw = sinwf * cosf - coswf * sinf
         cosw = sinwf * sinf + coswf * cosf
         apc[i] = np.arctan2(sinw, cosw)
@@ -353,7 +368,7 @@ def X2Osc(ms, m, x, v, set_argp = False, argp=np.array([]), set_longa = False, l
             apc[i] += 2*np.pi
         while apc[i] >= 2*np.pi:
             apc[i] -= 2*np.pi
-    
+
         if np.isnan(apc[i]):
           if set_argp == False:
             raise Exception('ArgP = NaN, need to set keyword "set_argp"')
@@ -416,9 +431,9 @@ def AngularM_Osc(ms, m, a, e, inc, apc, lasn, manom):
   xastro, vastro = Osc2X(ms, m, a, e, inc, apc, lasn, manom)
   xbary, vbary, xs, vs = Astro2Bary(ms, m, xastro, vastro)
   
-  L = ms * cross(xs, vs)
+  L = ms * mech.cross(xs, vs)
   for j in range(len(m)):
-    L = L + m[j] * cross(xbary[:,j], vbary[:,j])
+    L = L + m[j] * mech.cross(xbary[:,j], vbary[:,j])
   
   return L
   
@@ -489,7 +504,7 @@ def InvPlaneX(ms, m, xastro, vastro):
 
 
 def AstroInvPlaneX(ms, m, xastro, vastro):
-  xinv, vinv, xsi, vsi, theta, phi = Inv_planeX(ms, m, xastro, vastro)
+  xinv, vinv, xsi, vsi, theta, phi = InvPlaneX(ms, m, xastro, vastro)
   xai = xinv - xsi
   vai = vinv - vsi
   
@@ -523,11 +538,11 @@ def Hill_Gladman(ms, m, a, e):
   return lhs/rhs
   
 def Hill_MB(ms, m, a, e, inc, argp, longa, meana):
-  xa, va = osc2x(ms,m,a,e,inc,argp,longa,meana)
-  L = angularm_x(ms,m,xa,va)
+  xa, va = Osc2X(ms,m,a,e,inc,argp,longa,meana)
+  L = AngularM_X(ms,m,xa,va)
   L2 = np.dot(L.T,L)
 
-  E = energytot_x(ms,m,xa,va)
+  E = EnergyTot_X(ms,m,xa,va)
   
   Mstar = (ms*m[0]+ms*m[1]+m[0]*m[1])
   lhs = -2*(ms+m[0]+m[1])*L2*E/(k**4*Mstar**3)

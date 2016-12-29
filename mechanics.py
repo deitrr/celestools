@@ -1,3 +1,6 @@
+import numpy as np
+k = 0.01720209895
+
 def norm(v):
     """
     Calculates the magnitude of a vector
