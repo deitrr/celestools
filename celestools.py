@@ -213,7 +213,49 @@ def True2EccAnom(f, e):
     return eanom
 
 def Osc2X(ms, m, a, e, inc, apc, lasn, manom, inUnits = 'iau', outUnits = 'iau', angUnits = 'deg'):
-    #masses in solar units, a in AU, angles in degrees
+    """
+    Calculates the period of a planet/body based on the semi-major axis
+    
+    Parameters
+    ----------
+    ms : float
+        The mass of the central object (star) 
+    m : float or numpy array
+        The mass of the orbiting body or bodies 
+    a : float or numpy array
+        Semi-major axis of orbiting body or bodies in AU
+    e : float or numpy array
+        Eccentricity of orbiting bodies
+    inc : float or numpy array
+        inclination of orbital plane of orbiters
+    apc : float or numpy array
+        argument (NOT longitude) of periastron of orbiters
+    lasn : float or numpy array
+        longitude of ascending node of orbiters
+    manom : float or numpy array
+        mean anomaly of orbiting bodies
+    *NOTE: m, a, e, inc, apc, lasn, manom can be numpy arrays representing different
+           bodies or a time series of the same body, but MUST be the same length.
+    
+    Keyword Arguments
+    -----------------
+    inUnits : string
+        Unit system for input parameters . Options are 'iau' (default), 'mks', or 'cgs'
+    outUnits : string
+        Unit system for return value. Options are 'mks' (default) or 'cgs'
+    angUnits : string
+        Units for angles. Options are 'deg' (default) or 'rad'
+            
+    Returns
+    -------
+    xastro : numpy array
+        Cartesian position coordinates of orbiting bodies. The first index represents
+        (x, y, z), the second represents different bodies or time series.
+    vastro : numpy array
+        Cartesian velocity coordinates of orbiting bodies. The first index represents
+        (x, y, z), the second represents different bodies or time series.
+    
+    """
     if not isinstance(m, np.ndarray):
       m0 = np.array([m])
     else:
@@ -318,7 +360,9 @@ def Osc2X(ms, m, a, e, inc, apc, lasn, manom, inUnits = 'iau', outUnits = 'iau',
 
 def X2Osc(ms, m, x, v, set_argp = False, argp=np.array([]), set_longa = False, longa=np.array([]), inUnits = 'iau', outUnits = 'iau', angUnits = 'deg'):
     if not isinstance(m, np.ndarray):
-      m = np.array([m])  #if m is not an array, make it one so it can be indexed
+      m0 = np.array([m])  #if m is not an array, make it one so it can be indexed
+    else:
+      m0 = deepcopy(m)
     
     if len(np.shape(x)) != 2:
       x0 = np.array([x]).T #if x is 1d (ie, one planet), make it 2d for indexing
@@ -418,7 +462,7 @@ def X2Osc(ms, m, x, v, set_argp = False, argp=np.array([]), set_longa = False, l
       inc /= DEG
       apc /= DEG
       lasn /= DEG
-      manon /= DEG
+      manom /= DEG
     elif angUnits == 'rad':
       pass
     else:
