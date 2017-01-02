@@ -256,9 +256,11 @@ def Osc2X(ms, m, a, e, inc, apc, lasn, manom, inUnits = 'iau', outUnits = 'iau',
     if inUnits == 'iau':
       pass
     elif inUnits == 'mks':
+      ms /= MSUN
       m0 /= MSUN
       a0 /= AU
     elif inUnits == 'cgs':
+      ms /= MSUN*1000
       m0 /= MSUN*1000
       a0 /= AU*100
     else:
@@ -335,10 +337,12 @@ def X2Osc(ms, m, x, v, set_argp = False, argp=np.array([]), set_longa = False, l
     if inUnits == 'iau':
       pass
     elif inUnits == 'mks':
+      ms /= MSUN
       m0 /= MSUN
       x0 /= AU
       v0 *= s2d/AU
     elif inUnits == 'cgs':
+      ms /= MSUN*1000
       m0 /= MSUN*1000
       x0 /= AU*100
       v0 *= s2d/(AU*100)
@@ -400,11 +404,30 @@ def X2Osc(ms, m, x, v, set_argp = False, argp=np.array([]), set_longa = False, l
             manom[i] += 2*np.pi
         while manom[i] >= 2*np.pi:
             manom[i] -= 2*np.pi
-            
-    if len(m) == 1:
-      return (a[0], e[0], inc[0]/DEG, apc[0]/DEG, lasn[0]/DEG, manom[0]/DEG)
+    
+    if outUnits == 'iau':
+      pass
+    elif outUnits == 'mks':
+      a *= AU
+    elif outUnits == 'cgs':
+      a *= AU*100
     else:
-      return (a, e, inc/DEG, apc/DEG, lasn/DEG, manom/DEG)
+      raise ValueError('Invalid units for "outUnits". Valid options are "iau", "mks", or "cgs"')
+    
+    if angUnits == 'deg':
+      inc /= DEG
+      apc /= DEG
+      lasn /= DEG
+      manon /= DEG
+    elif angUnits == 'rad':
+      pass
+    else:
+      raise ValueError('Invalid units for "angUnits". Valid options are "rad" or "deg"')
+      
+    if len(m) == 1:
+      return (a[0], e[0], inc[0], apc[0], lasn[0], manom[0])
+    else:
+      return (a, e, inc, apc, lasn, manom)
     
 def FixAngles(angles, domain = (0,360), angUnits = 'deg'):
   if angUnits == 'deg':
