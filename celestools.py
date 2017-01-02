@@ -214,7 +214,7 @@ def True2EccAnom(f, e):
 
 def Osc2X(ms, m, a, e, inc, apc, lasn, manom, inUnits = 'iau', outUnits = 'iau', angUnits = 'deg'):
     """
-    Calculates the period of a planet/body based on the semi-major axis
+    Calculates cartesian coordinates from osculating elements
     
     Parameters
     ----------
@@ -223,7 +223,7 @@ def Osc2X(ms, m, a, e, inc, apc, lasn, manom, inUnits = 'iau', outUnits = 'iau',
     m : float or numpy array
         The mass of the orbiting body or bodies 
     a : float or numpy array
-        Semi-major axis of orbiting body or bodies in AU
+        Semi-major axis of orbiting body or bodies
     e : float or numpy array
         Eccentricity of orbiting bodies
     inc : float or numpy array
@@ -249,11 +249,11 @@ def Osc2X(ms, m, a, e, inc, apc, lasn, manom, inUnits = 'iau', outUnits = 'iau',
     Returns
     -------
     xastro : numpy array
-        Cartesian position coordinates of orbiting bodies. The first index represents
-        (x, y, z), the second represents different bodies or time series.
+        Cartesian position coordinates of orbiters. The first index represents (x,y,z),
+        the second represents different bodies or a time series for a single body.
     vastro : numpy array
-        Cartesian velocity coordinates of orbiting bodies. The first index represents
-        (x, y, z), the second represents different bodies or time series.
+        Cartesian velocity coordinates of orbiters. The first index represents (x,y,z),
+        the second represents different bodies or a time series for a single body.
     
     """
     if not isinstance(m, np.ndarray):
@@ -357,8 +357,49 @@ def Osc2X(ms, m, a, e, inc, apc, lasn, manom, inUnits = 'iau', outUnits = 'iau',
 
     return (xastro, vastro) #return x in AU and v in AU/day
 
-
 def X2Osc(ms, m, x, v, set_argp = False, argp=np.array([]), set_longa = False, longa=np.array([]), inUnits = 'iau', outUnits = 'iau', angUnits = 'deg'):
+    """
+    Calculates osculating elements from cartesian coordinates
+    
+    Parameters
+    ----------
+    ms : float
+        The mass of the central object (star) 
+    m : float or numpy array
+        The mass of the orbiting body or bodies 
+    xastro : numpy array
+        Cartesian position coordinates of orbiters. The first index represents (x,y,z),
+        the second represents different bodies or a time series for a single body.
+    vastro : numpy array
+        Cartesian velocity coordinates of orbiters. The first index represents (x,y,z),
+        the second represents different bodies or a time series for a single body.
+    
+    Keyword Arguments
+    -----------------
+    inUnits : string
+        Unit system for input parameters . Options are 'iau' (default), 'mks', or 'cgs'
+    outUnits : string
+        Unit system for return value. Options are 'mks' (default) or 'cgs'
+    angUnits : string
+        Units for angles. Options are 'deg' (default) or 'rad'
+            
+    Returns
+    -------
+    a : float or numpy array
+        Semi-major axis of orbiting body or bodies
+    e : float or numpy array
+        Eccentricity of orbiting bodies
+    inc : float or numpy array
+        inclination of orbital plane of orbiters
+    apc : float or numpy array
+        argument (NOT longitude) of periastron of orbiters
+    lasn : float or numpy array
+        longitude of ascending node of orbiters
+    manom : float or numpy array
+        mean anomaly of orbiting bodies
+
+    """
+    
     if not isinstance(m, np.ndarray):
       m0 = np.array([m])  #if m is not an array, make it one so it can be indexed
     else:
