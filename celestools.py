@@ -256,11 +256,11 @@ def Osc2X(ms, m, a, e, inc, apc, lasn, manom, inUnits = 'iau', outUnits = 'iau',
     if inUnits == 'iau':
       pass
     elif inUnits == 'mks':
-      m0 /= MSUNkg
-      a0 /= AUm
+      m0 /= MSUN
+      a0 /= AU
     elif inUnits == 'cgs':
-      m0 /= MSUNg
-      a0 /= AUc
+      m0 /= MSUN*1000
+      a0 /= AU*100
     else:
       raise ValueError('Invalid units for "inUnits". Valid options are "iau", "mks", or "cgs"')
 
@@ -303,31 +303,48 @@ def Osc2X(ms, m, a, e, inc, apc, lasn, manom, inUnits = 'iau', outUnits = 'iau',
     if outUnits == 'iau':
       pass
     elif outUnits == 'mks':
-      xastro *= AUm
-      vastro *= AUm/s2d
+      xastro *= AU
+      vastro *= AU/s2d
     elif outUnits == 'cgs':
-      xastro *= AUc
-      vastro *= AUc/s2d
+      xastro *= AU*100
+      vastro *= AU/s2d*100
     else:
       raise ValueError('Invalid units for "outUnits". Valid options are "iau", "mks", or "cgs"')
 
     return (xastro, vastro) #return x in AU and v in AU/day
 
 
-def X2Osc(ms, m, x, v, set_argp = False, argp=np.array([]), set_longa = False, longa=np.array([])):
+def X2Osc(ms, m, x, v, set_argp = False, argp=np.array([]), set_longa = False, longa=np.array([]), inUnits = 'iau', outUnits = 'iau', angUnits = 'deg'):
     if not isinstance(m, np.ndarray):
       m = np.array([m])  #if m is not an array, make it one so it can be indexed
     
     if len(np.shape(x)) != 2:
-      x = np.array([x]).T #if x is 1d (ie, one planet), make it 2d for indexing
+      x0 = np.array([x]).T #if x is 1d (ie, one planet), make it 2d for indexing
+    else:
+      x0 = deepcopy(x)
     
     if len(np.shape(v)) != 2:
-      v = np.array([v]).T #if v is 1d (ie, one planet), make it 2d for indexing
+      v0 = np.array([v]).T #if v is 1d (ie, one planet), make it 2d for indexing
+    else:
+      v0 = deepcopy(v)  
       
     if len(m) != np.shape(x)[1] or len(m) != np.shape(v)[1]:
       print ('m, x, and v do not have the same length!')
       return None
 
+    if inUnits == 'iau':
+      pass
+    elif inUnits == 'mks':
+      m0 /= MSUN
+      x0 /= AU
+      v0 *= s2d/AU
+    elif inUnits == 'cgs':
+      m0 /= MSUN*1000
+      x0 /= AU*100
+      v0 *= s2d/(AU*100)
+    else:
+      raise ValueError('Invalid units for "inUnits". Valid options are "iau", "mks", or "cgs"')
+    
     a = np.zeros(len(m))
     e = np.zeros(len(m))
     inc = np.zeros(len(m))
