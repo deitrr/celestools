@@ -291,7 +291,7 @@ def Osc2X(ms, m, a, e, inc, apc, lasn, manom, inUnits = 'iau', outUnits = 'iau',
     else:
       manom0 = deepcopy(manom)
       
-    if len(m) != len(a) or len(m) != len(e) or len(m) != len(inc) or len(m) != len(apc) or len(m) != len(lasn) or len(m) != len(manom):
+    if len(m0) != len(a0) or len(m0) != len(e0) or len(m0) != len(inc0) or len(m0) != len(apc0) or len(m0) != len(lasn0) or len(m0) != len(manom0):
       print ('not all elements have the same length!')
       return None
       
