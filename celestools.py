@@ -214,7 +214,49 @@ def True2EccAnom(f, e):
     return eanom
 
 def Osc2X(ms, m, a, e, inc, apc, lasn, manom, inUnits = 'iau', outUnits = 'iau', angUnits = 'deg'):
-    #masses in solar units, a in AU, angles in degrees
+    """
+    Calculates cartesian coordinates from osculating elements
+    
+    Parameters
+    ----------
+    ms : float
+        The mass of the central object (star) 
+    m : float or numpy array
+        The mass of the orbiting body or bodies 
+    a : float or numpy array
+        Semi-major axis of orbiting body or bodies
+    e : float or numpy array
+        Eccentricity of orbiting bodies
+    inc : float or numpy array
+        inclination of orbital plane of orbiters
+    apc : float or numpy array
+        argument (NOT longitude) of periastron of orbiters
+    lasn : float or numpy array
+        longitude of ascending node of orbiters
+    manom : float or numpy array
+        mean anomaly of orbiting bodies
+    *NOTE: m, a, e, inc, apc, lasn, manom can be numpy arrays representing different
+           bodies or a time series of the same body, but MUST be the same length.
+    
+    Keyword Arguments
+    -----------------
+    inUnits : string
+        Unit system for input parameters . Options are 'iau' (default), 'mks', or 'cgs'
+    outUnits : string
+        Unit system for return value. Options are 'mks' (default) or 'cgs'
+    angUnits : string
+        Units for angles. Options are 'deg' (default) or 'rad'
+            
+    Returns
+    -------
+    xastro : numpy array
+        Cartesian position coordinates of orbiters. The first index represents (x,y,z),
+        the second represents different bodies or a time series for a single body.
+    vastro : numpy array
+        Cartesian velocity coordinates of orbiters. The first index represents (x,y,z),
+        the second represents different bodies or a time series for a single body.
+    
+    """
     if not isinstance(m, np.ndarray):
       m0 = np.array([m])
     else:
@@ -249,8 +291,7 @@ def Osc2X(ms, m, a, e, inc, apc, lasn, manom, inUnits = 'iau', outUnits = 'iau',
       manom0 = np.array([manom])
     else:
       manom0 = deepcopy(manom)
-    
-    #import pdb; pdb.set_trace()  
+
     if len(m0) != len(a0) or len(m0) != len(e0) or len(m0) != len(inc0) or len(m0) != len(apc0) or len(m0) != len(lasn0) or len(m0) != len(manom0):
       print ('not all elements have the same length!')
       return None
@@ -258,11 +299,13 @@ def Osc2X(ms, m, a, e, inc, apc, lasn, manom, inUnits = 'iau', outUnits = 'iau',
     if inUnits == 'iau':
       pass
     elif inUnits == 'mks':
-      m0 /= MSUNkg
-      a0 /= AUm
+      ms /= MSUN
+      m0 /= MSUN
+      a0 /= AU
     elif inUnits == 'cgs':
-      m0 /= MSUNg
-      a0 /= AUc
+      ms /= MSUN*1000
+      m0 /= MSUN*1000
+      a0 /= AU*100
     else:
       raise ValueError('Invalid units for "inUnits". Valid options are "iau", "mks", or "cgs"')
 
@@ -305,31 +348,93 @@ def Osc2X(ms, m, a, e, inc, apc, lasn, manom, inUnits = 'iau', outUnits = 'iau',
     if outUnits == 'iau':
       pass
     elif outUnits == 'mks':
-      xastro *= AUm
-      vastro *= AUm/s2d
+      xastro *= AU
+      vastro *= AU/s2d
     elif outUnits == 'cgs':
-      xastro *= AUc
-      vastro *= AUc/s2d
+      xastro *= AU*100
+      vastro *= AU/s2d*100
     else:
       raise ValueError('Invalid units for "outUnits". Valid options are "iau", "mks", or "cgs"')
 
     return (xastro, vastro) #return x in AU and v in AU/day
 
+def X2Osc(ms, m, x, v, set_argp = False, argp=np.array([]), set_longa = False, longa=np.array([]), inUnits = 'iau', outUnits = 'iau', angUnits = 'deg'):
+    """
+    Calculates osculating elements from cartesian coordinates
+    
+    Parameters
+    ----------
+    ms : float
+        The mass of the central object (star) 
+    m : float or numpy array
+        The mass of the orbiting body or bodies 
+    xastro : numpy array
+        Cartesian position coordinates of orbiters. The first index represents (x,y,z),
+        the second represents different bodies or a time series for a single body.
+    vastro : numpy array
+        Cartesian velocity coordinates of orbiters. The first index represents (x,y,z),
+        the second represents different bodies or a time series for a single body.
+    
+    Keyword Arguments
+    -----------------
+    inUnits : string
+        Unit system for input parameters . Options are 'iau' (default), 'mks', or 'cgs'
+    outUnits : string
+        Unit system for return value. Options are 'mks' (default) or 'cgs'
+    angUnits : string
+        Units for angles. Options are 'deg' (default) or 'rad'
+            
+    Returns
+    -------
+    a : float or numpy array
+        Semi-major axis of orbiting body or bodies
+    e : float or numpy array
+        Eccentricity of orbiting bodies
+    inc : float or numpy array
+        inclination of orbital plane of orbiters
+    apc : float or numpy array
+        argument (NOT longitude) of periastron of orbiters
+    lasn : float or numpy array
+        longitude of ascending node of orbiters
+    manom : float or numpy array
+        mean anomaly of orbiting bodies
 
-def X2Osc(ms, m, x, v, set_argp = False, argp=np.array([]), set_longa = False, longa=np.array([])):
+    """
+    
     if not isinstance(m, np.ndarray):
-      m = np.array([m])  #if m is not an array, make it one so it can be indexed
+      m0 = np.array([m])  #if m is not an array, make it one so it can be indexed
+    else:
+      m0 = deepcopy(m)
     
     if len(np.shape(x)) != 2:
-      x = np.array([x]).T #if x is 1d (ie, one planet), make it 2d for indexing
+      x0 = np.array([x]).T #if x is 1d (ie, one planet), make it 2d for indexing
+    else:
+      x0 = deepcopy(x)
     
     if len(np.shape(v)) != 2:
-      v = np.array([v]).T #if v is 1d (ie, one planet), make it 2d for indexing
+      v0 = np.array([v]).T #if v is 1d (ie, one planet), make it 2d for indexing
+    else:
+      v0 = deepcopy(v)  
       
     if len(m) != np.shape(x)[1] or len(m) != np.shape(v)[1]:
       print ('m, x, and v do not have the same length!')
       return None
 
+    if inUnits == 'iau':
+      pass
+    elif inUnits == 'mks':
+      ms /= MSUN
+      m0 /= MSUN
+      x0 /= AU
+      v0 *= s2d/AU
+    elif inUnits == 'cgs':
+      ms /= MSUN*1000
+      m0 /= MSUN*1000
+      x0 /= AU*100
+      v0 *= s2d/(AU*100)
+    else:
+      raise ValueError('Invalid units for "inUnits". Valid options are "iau", "mks", or "cgs"')
+    
     a = np.zeros(len(m))
     e = np.zeros(len(m))
     inc = np.zeros(len(m))
@@ -385,11 +490,30 @@ def X2Osc(ms, m, x, v, set_argp = False, argp=np.array([]), set_longa = False, l
             manom[i] += 2*np.pi
         while manom[i] >= 2*np.pi:
             manom[i] -= 2*np.pi
-            
-    if len(m) == 1:
-      return (a[0], e[0], inc[0]/DEG, apc[0]/DEG, lasn[0]/DEG, manom[0]/DEG)
+    
+    if outUnits == 'iau':
+      pass
+    elif outUnits == 'mks':
+      a *= AU
+    elif outUnits == 'cgs':
+      a *= AU*100
     else:
-      return (a, e, inc/DEG, apc/DEG, lasn/DEG, manom/DEG)
+      raise ValueError('Invalid units for "outUnits". Valid options are "iau", "mks", or "cgs"')
+    
+    if angUnits == 'deg':
+      inc /= DEG
+      apc /= DEG
+      lasn /= DEG
+      manom /= DEG
+    elif angUnits == 'rad':
+      pass
+    else:
+      raise ValueError('Invalid units for "angUnits". Valid options are "rad" or "deg"')
+      
+    if len(m) == 1:
+      return (a[0], e[0], inc[0], apc[0], lasn[0], manom[0])
+    else:
+      return (a, e, inc, apc, lasn, manom)
     
 def FixAngles(angles, domain = (0,360), angUnits = 'deg'):
   if angUnits == 'deg':
