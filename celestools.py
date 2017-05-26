@@ -2,6 +2,7 @@
 import numpy as np
 import mechanics as mech
 from copy import deepcopy
+import os
 
 k = 0.01720209895
 DEG = np.pi/180.0
@@ -248,8 +249,9 @@ def Osc2X(ms, m, a, e, inc, apc, lasn, manom, inUnits = 'iau', outUnits = 'iau',
       manom0 = np.array([manom])
     else:
       manom0 = deepcopy(manom)
-      
-    if len(m) != len(a) or len(m) != len(e) or len(m) != len(inc) or len(m) != len(apc) or len(m) != len(lasn) or len(m) != len(manom):
+    
+    #import pdb; pdb.set_trace()  
+    if len(m0) != len(a0) or len(m0) != len(e0) or len(m0) != len(inc0) or len(m0) != len(apc0) or len(m0) != len(lasn0) or len(m0) != len(manom0):
       print ('not all elements have the same length!')
       return None
       
@@ -576,4 +578,41 @@ def RadialVel(ms,mp,P,e,argp,inc,meanl,planet=False):
   a = ((P*daysec)**2 * G *(ms+mp)/(4*np.pi**2))**(1./3)
   return -np.sqrt(G/((ms+mp)*(a*(1-e**2))))*mp*np.sin(inc*np.pi/180.)\
         *(np.cos((argp+truea)*np.pi/180.)+e*np.cos(argp*np.pi/180.))
+
+
+def ConvCoords(dir):
+  cwd = os.getcwd()
+  os.chdir(dir)
+  
+  f = open('trial.hnb','r')
+  lines = f.readlines()
+  f.close()
+  
+  for j in np.arange(len(lines)):
+    if lines[j].split() != []:
+      if lines[j].split()[0] == 'ParticleType:':
+        skip = j+1
+      if lines[j].split()[0] == 'M':
+        ms = np.float(lines[j].split()[2])
+        
+  m, x0, y0, z0, u0, v0, w0 = np.loadtxt('trial.hnb',unpack=True,skiprows=skip)
+  
+  i = 1
+  while os.path.exists('%01d.dat'%i):
+    t, x, y, z, u, v, w = np.loadtxt('%01d.dat'%i,unpack=True)
+    X = np.vstack([x,y,z])
+    V = np.vstack([u,v,w])/365.25
+    
+    mm = np.zeros_like(t) + m[i-1]
+    a,e,inc,argp,longa,meana = X2Osc(ms,mm,X,V)
+    
+    ff = open('%01d.aei'%i,'w')
+    for j in np.arange(len(t)):
+      ff.write('%#.5f %#.8f %#.8f %#.8f %#.8f %#.8f %#.8f %#.8e\n'%(t[j],a[j],e[j],inc[j],argp[j],longa[j],meana[j],m[i-1]))
+    ff.close() 
+    i+=1
+    
+  os.chdir(cwd)
+  
+  
 
