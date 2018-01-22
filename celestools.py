@@ -416,7 +416,7 @@ def X2Osc(ms, m, x, v, set_argp = False, argp=np.array([]), set_longa = False, l
     else:
       v0 = deepcopy(v)  
       
-    if len(m) != np.shape(x)[1] or len(m) != np.shape(v)[1]:
+    if len(m0) != np.shape(x0)[1] or len(m0) != np.shape(v0)[1]:
       print ('m, x, and v do not have the same length!')
       return None
 
@@ -435,18 +435,18 @@ def X2Osc(ms, m, x, v, set_argp = False, argp=np.array([]), set_longa = False, l
     else:
       raise ValueError('Invalid units for "inUnits". Valid options are "iau", "mks", or "cgs"')
     
-    a = np.zeros(len(m))
-    e = np.zeros(len(m))
-    inc = np.zeros(len(m))
-    apc = np.zeros(len(m))
-    lasn = np.zeros(len(m))
-    manom = np.zeros(len(m))
-    for i in range(len(m)):
-        r = mech.norm(x[:,i])
-        vsq = mech.norm(v[:,i]) * mech.norm(v[:,i])
-        rdot = sum(x[:,i] * v[:,i]) / r
-        mu = k**2.0 * (ms + m[i])
-        h = mech.cross(x[:,i], v[:,i])
+    a = np.zeros(len(m0))
+    e = np.zeros(len(m0))
+    inc = np.zeros(len(m0))
+    apc = np.zeros(len(m0))
+    lasn = np.zeros(len(m0))
+    manom = np.zeros(len(m0))
+    for i in range(len(m0)):
+        r = mech.norm(x0[:,i])
+        vsq = mech.norm(v0[:,i]) * mech.norm(v0[:,i])
+        rdot = sum(x0[:,i] * v0[:,i]) / r
+        mu = k**2.0 * (ms + m0[i])
+        h = mech.cross(x0[:,i], v0[:,i])
         hsq = mech.norm(h) * mech.norm(h)
 
         a[i] = (2.0/r - vsq/mu)**(-1.0)
@@ -461,8 +461,8 @@ def X2Osc(ms, m, x, v, set_argp = False, argp=np.array([]), set_longa = False, l
           else:
             lasn[i] = longa[i]
 
-        sinwf = x[2,i] / (r*np.sin(inc[i]))
-        coswf = (x[0,i]/r + np.sin(lasn[i]) * sinwf * np.cos(inc[i])) / np.cos(lasn[i])
+        sinwf = x0[2,i] / (r*np.sin(inc[i]))
+        coswf = (x0[0,i]/r + np.sin(lasn[i]) * sinwf * np.cos(inc[i])) / np.cos(lasn[i])
         
         sinf = a[i] * (1.0 - e[i]*e[i]) * rdot / (mech.norm(h) * e[i])
         cosf = (a[i] * (1.0 - e[i]*e[i]) / r - 1.0) / e[i]
@@ -510,7 +510,7 @@ def X2Osc(ms, m, x, v, set_argp = False, argp=np.array([]), set_longa = False, l
     else:
       raise ValueError('Invalid units for "angUnits". Valid options are "rad" or "deg"')
       
-    if len(m) == 1:
+    if len(m0) == 1:
       return (a[0], e[0], inc[0], apc[0], lasn[0], manom[0])
     else:
       return (a, e, inc, apc, lasn, manom)
@@ -738,5 +738,68 @@ def ConvCoords(dir):
     
   os.chdir(cwd)
   
+def LaplaceCoeff(alpha,j,s):
+  fac = 1.0
+  sum = 1.0
+  term = 1.0
+  n = 1
   
+  if j == 1:
+    fac = s*alpha
+  else:
+    for k in np.arange(1,j+1):
+      fac *= (s+k-1)/k * alpha
+  
+  while term >= 1e-15*sum:
+    term = 1.0
+    for k in np.arange(1,n+1):
+      term *= (s+k-1)*(s+j+k-1)/(k*(j+k))*alpha*alpha
+    sum = sum+term
+    n+=1
+    
+  return 2*fac*sum
 
+def ABMatrix(mcen,mass,a):
+  A = np.zeros((len(mass),len(mass)))
+  B = np.zeros((len(mass),len(mass)))
+  
+  for j in np.arange(len(mass)):
+    for kk in np.arange(len(mass)):
+      if kk != j:
+        if a[kk] > a[j]:
+          alpha = a[j]/a[kk]
+          abar = alpha
+        else:
+          alpha = a[kk]/a[j]
+          abar = 1
+        
+        n = k*np.sqrt((mcen+mass[j])/(a[j]*a[j]*a[j])) #rad/day
+        b1 = LaplaceCoeff(alpha,1,1.5)
+        b2 = LaplaceCoeff(alpha,2,1.5)
+        
+        A[j][j] += n/4.0*mass[kk]/(mcen+mass[j])*alpha*abar*b1
+        B[j][j] += -n/4.0*mass[kk]/(mcen+mass[j])*alpha*abar*b1
+        A[j][kk] = -n/4.0*mass[kk]/(mcen+mass[j])*alpha*abar*b2
+        B[j][kk] = n/4.0*mass[kk]/(mcen+mass[j])*alpha*abar*b1
+  
+  return A, B
+  
+def EigenVals(mcen,mass,a):
+  A, B = ABMatrix(mcen,mass,a)
+  A *= 180/np.pi*365.25
+  B *= 180/np.pi*365.25
+  
+  eeig = np.linalg.eigvals(A)
+  ieig = np.linalg.eigvals(B)
+  
+  return eeig*3600, ieig*3600 #arcsec per year
+  
+def EigenVecs(mcen,mass,a):
+  A, B = ABMatrix(mcen,mass,a)
+  A *= 180/np.pi*365.25
+  B *= 180/np.pi*365.25
+  
+  eeig, evec = np.linalg.eig(A)
+  ieig, ivec = np.linalg.eig(B)
+  
+  return evec, ivec
